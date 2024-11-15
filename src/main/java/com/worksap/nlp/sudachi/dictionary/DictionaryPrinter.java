@@ -25,17 +25,22 @@ import java.util.stream.Collectors;
 import java.io.Console;
 
 import com.worksap.nlp.sudachi.WordId;
+import com.worksap.nlp.sudachi.TextNormalizer;
+import com.worksap.nlp.sudachi.Config;
+import com.worksap.nlp.sudachi.InputTextPlugin;
+import com.worksap.nlp.sudachi.PathAnchor;
 import com.worksap.nlp.sudachi.SudachiCommandLine.FileOrStdoutPrintStream;
 
 public class DictionaryPrinter {
     private final PrintStream output;
+    private final TextNormalizer textNormalizer;
     private final GrammarImpl grammar;
     private final LexiconSet lexicon;
     private final List<String> posStrings;
     private final boolean isUser;
     private final int entrySize;
 
-    DictionaryPrinter(PrintStream output, BinaryDictionary dic, BinaryDictionary base) {
+    DictionaryPrinter(PrintStream output, BinaryDictionary dic, BinaryDictionary base) throws IOException {
         if (dic.getDictionaryHeader().isUserDictionary() && base == null) {
             throw new IllegalArgumentException("System dictionary is required to print user dictionary");
         }
@@ -57,6 +62,10 @@ public class DictionaryPrinter {
             }
         }
 
+        // set default char category for text normalizer
+        grammar.setCharacterCategory(CharacterCategory.load(PathAnchor.classpath().resource("char.def")));
+        textNormalizer = setupTextNormalizer(grammar);
+
         List<String> poss = new ArrayList<>();
         for (short pid = 0; pid < grammar.getPartOfSpeechSize(); pid++) {
             poss.add(String.join(",", grammar.getPartOfSpeechString(pid)));
@@ -64,6 +73,23 @@ public class DictionaryPrinter {
         this.posStrings = poss;
 
         this.entrySize = dic.getLexicon().size();
+    }
+
+    /** Setup TextNormalizer with given grammar and DefaultInputTextPlugin. */
+    private TextNormalizer setupTextNormalizer(Grammar grammar) throws IOException {
+        PathAnchor anchor = PathAnchor.classpath();
+        List<Config.PluginConf<InputTextPlugin>> pconfs = Config.fromJsonString(
+                "{\"inputTextPlugin\":[{\"class\":\"com.worksap.nlp.sudachi.DefaultInputTextPlugin\"}]}", anchor)
+                .getInputTextPlugins();
+
+        List<InputTextPlugin> plugins = new ArrayList<>();
+        for (Config.PluginConf<InputTextPlugin> pconf : pconfs) {
+            InputTextPlugin p = pconf.instantiate(anchor);
+            p.setUp(grammar);
+            plugins.add(p);
+        }
+
+        return new TextNormalizer(grammar, plugins);
     }
 
     private static void printUsage() {
@@ -86,7 +112,7 @@ public class DictionaryPrinter {
         short cost = lexicon.getCost(wordId);
         WordInfo wordInfo = lexicon.getWordInfo(wordId);
 
-        field(maybeEscapeString(wordInfo.getSurface()));
+        field(maybeEscapeString(textNormalizer.normalize(wordInfo.getSurface())));
         field(leftId);
         field(rightId);
         field(cost);
