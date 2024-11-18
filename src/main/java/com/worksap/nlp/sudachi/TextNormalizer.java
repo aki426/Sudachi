@@ -38,6 +38,9 @@ public class TextNormalizer {
      * {@link com.worksap.nlp.sudachi.dictionary.CharacterCategory}.
      */
     public TextNormalizer(Grammar grammar, List<InputTextPlugin> inputTextPlugins) {
+        if (grammar.getCharacterCategory() == null) {
+            throw new IllegalArgumentException("grammar for TextNormalizer must have CharacterCategory.");
+        }
         this.grammar = grammar;
         this.inputTextPlugins = inputTextPlugins;
     }
