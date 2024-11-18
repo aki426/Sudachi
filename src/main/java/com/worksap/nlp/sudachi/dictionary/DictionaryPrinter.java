@@ -26,9 +26,6 @@ import java.io.Console;
 
 import com.worksap.nlp.sudachi.WordId;
 import com.worksap.nlp.sudachi.TextNormalizer;
-import com.worksap.nlp.sudachi.Config;
-import com.worksap.nlp.sudachi.InputTextPlugin;
-import com.worksap.nlp.sudachi.PathAnchor;
 import com.worksap.nlp.sudachi.SudachiCommandLine.FileOrStdoutPrintStream;
 
 public class DictionaryPrinter {
@@ -63,8 +60,8 @@ public class DictionaryPrinter {
         }
 
         // set default char category for text normalizer
-        grammar.setCharacterCategory(CharacterCategory.load(PathAnchor.classpath().resource("char.def")));
-        textNormalizer = setupTextNormalizer(grammar);
+        grammar.setCharacterCategory(CharacterCategory.loadDefault());
+        textNormalizer = new TextNormalizer(grammar);
 
         List<String> poss = new ArrayList<>();
         for (short pid = 0; pid < grammar.getPartOfSpeechSize(); pid++) {
@@ -73,23 +70,6 @@ public class DictionaryPrinter {
         this.posStrings = poss;
 
         this.entrySize = dic.getLexicon().size();
-    }
-
-    /** Setup TextNormalizer with given grammar and DefaultInputTextPlugin. */
-    private TextNormalizer setupTextNormalizer(Grammar grammar) throws IOException {
-        PathAnchor anchor = PathAnchor.classpath();
-        List<Config.PluginConf<InputTextPlugin>> pconfs = Config.fromJsonString(
-                "{\"inputTextPlugin\":[{\"class\":\"com.worksap.nlp.sudachi.DefaultInputTextPlugin\"}]}", anchor)
-                .getInputTextPlugins();
-
-        List<InputTextPlugin> plugins = new ArrayList<>();
-        for (Config.PluginConf<InputTextPlugin> pconf : pconfs) {
-            InputTextPlugin p = pconf.instantiate(anchor);
-            p.setUp(grammar);
-            plugins.add(p);
-        }
-
-        return new TextNormalizer(grammar, plugins);
     }
 
     private static void printUsage() {

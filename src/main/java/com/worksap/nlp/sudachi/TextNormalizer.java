@@ -17,32 +17,77 @@
 package com.worksap.nlp.sudachi;
 
 import java.util.List;
+import java.io.IOException;
+import java.util.ArrayList;
 
+import com.worksap.nlp.sudachi.dictionary.CharacterCategory;
 import com.worksap.nlp.sudachi.dictionary.Grammar;
+import com.worksap.nlp.sudachi.dictionary.GrammarImpl;
 
 /**
- * Text normalizer that is equivalent to the one applied in the
- * JapaneseTokenizer.
+ * A text normalizer.
  */
 public class TextNormalizer {
-    Grammar grammar;
-    List<InputTextPlugin> inputTextPlugins;
+    private final Grammar grammar;
+    private final List<InputTextPlugin> inputTextPlugins;
 
     /**
-     * Create TextNormalizer based on the JapaneseDictionary.
-     */
-    public TextNormalizer(JapaneseDictionary dictionary) {
-        this(dictionary.getGrammar(), dictionary.inputTextPlugins);
-    }
-
-    /**
-     * Create TextNormalizer from a grammar and input text plugins.
+     * Create a TextNormalizer from a grammar and input text plugins.
      * 
-     * Grammar must have CharCategory.
+     * Grammar must have
+     * {@link com.worksap.nlp.sudachi.dictionary.CharacterCategory}.
      */
     public TextNormalizer(Grammar grammar, List<InputTextPlugin> inputTextPlugins) {
         this.grammar = grammar;
         this.inputTextPlugins = inputTextPlugins;
+    }
+
+    /**
+     * Create a TextNormalizer from a grammar.
+     * 
+     * Grammar must have a
+     * {@link com.worksap.nlp.sudachi.dictionary.CharacterCategory}.
+     * {@link DefaultInputTextPlugin} will be used.
+     */
+    public TextNormalizer(Grammar grammar) throws IOException {
+        this(grammar, setupDefaultInputTextPlugins(grammar));
+    }
+
+    /**
+     * Create a default TextNormalizer that uses default
+     * {@link com.worksap.nlp.sudachi.dictionary.CharacterCategory} and
+     * {@link DefaultInputTextPlugin}.
+     */
+    public static TextNormalizer defaultTextNormalizer() throws IOException {
+        Grammar grammar = new GrammarImpl();
+        grammar.setCharacterCategory(CharacterCategory.loadDefault());
+        return new TextNormalizer(grammar);
+    }
+
+    /**
+     * Create TextNormalizer based on the {@link JapaneseDictionary}.
+     */
+    public static TextNormalizer fromDictionary(JapaneseDictionary dictionary) {
+        return new TextNormalizer(dictionary.getGrammar(), dictionary.inputTextPlugins);
+    }
+
+    /**
+     * Setup {@link DefaultInputTextPlugin} using a grammar.
+     */
+    private static List<InputTextPlugin> setupDefaultInputTextPlugins(Grammar grammar) throws IOException {
+        PathAnchor anchor = PathAnchor.classpath();
+        List<Config.PluginConf<InputTextPlugin>> pconfs = Config.fromJsonString(
+                "{\"inputTextPlugin\":[{\"class\":\"com.worksap.nlp.sudachi.DefaultInputTextPlugin\"}]}", anchor)
+                .getInputTextPlugins();
+
+        List<InputTextPlugin> plugins = new ArrayList<>();
+        for (Config.PluginConf<InputTextPlugin> pconf : pconfs) {
+            InputTextPlugin p = pconf.instantiate(anchor);
+            p.setUp(grammar);
+            plugins.add(p);
+        }
+
+        return plugins;
     }
 
     /** Normalize given text */
