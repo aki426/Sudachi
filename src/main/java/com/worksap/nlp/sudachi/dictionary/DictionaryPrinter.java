@@ -25,17 +25,19 @@ import java.util.stream.Collectors;
 import java.io.Console;
 
 import com.worksap.nlp.sudachi.WordId;
+import com.worksap.nlp.sudachi.TextNormalizer;
 import com.worksap.nlp.sudachi.SudachiCommandLine.FileOrStdoutPrintStream;
 
 public class DictionaryPrinter {
     private final PrintStream output;
+    private final TextNormalizer textNormalizer;
     private final GrammarImpl grammar;
     private final LexiconSet lexicon;
     private final List<String> posStrings;
     private final boolean isUser;
     private final int entrySize;
 
-    DictionaryPrinter(PrintStream output, BinaryDictionary dic, BinaryDictionary base) {
+    DictionaryPrinter(PrintStream output, BinaryDictionary dic, BinaryDictionary base) throws IOException {
         if (dic.getDictionaryHeader().isUserDictionary() && base == null) {
             throw new IllegalArgumentException("System dictionary is required to print user dictionary");
         }
@@ -56,6 +58,10 @@ public class DictionaryPrinter {
                 grammar.addPosList(dic.getGrammar());
             }
         }
+
+        // set default char category for text normalizer
+        grammar.setCharacterCategory(CharacterCategory.loadDefault());
+        textNormalizer = new TextNormalizer(grammar);
 
         List<String> poss = new ArrayList<>();
         for (short pid = 0; pid < grammar.getPartOfSpeechSize(); pid++) {
@@ -86,7 +92,7 @@ public class DictionaryPrinter {
         short cost = lexicon.getCost(wordId);
         WordInfo wordInfo = lexicon.getWordInfo(wordId);
 
-        field(maybeEscapeString(wordInfo.getSurface()));
+        field(maybeEscapeString(textNormalizer.normalize(wordInfo.getSurface())));
         field(leftId);
         field(rightId);
         field(cost);

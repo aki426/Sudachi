@@ -75,6 +75,7 @@ public class DictionaryPrinterTest {
         }
         assertThat(actuals.length, is(40));
         assertThat(actuals[0], is("た,1,1,8729,た,助動詞,*,*,*,助動詞-タ,終止形-一般,タ,た,*,A,*,*,*,*"));
+        assertThat(actuals[37], is("特a,8,8,2914,特A,名詞,普通名詞,一般,*,*,*,トクエー,特A,*,A,*,*,*,*"));
     }
 
     @Test
